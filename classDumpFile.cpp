@@ -10,7 +10,6 @@
 #include "classStream.hpp"
 using namespace std;
 
-
 unsigned int toInt(char* h){
 	std::stringstream ss;
 	unsigned int x;
@@ -114,6 +113,10 @@ class ConstantPoolEntry {
 			return tagInfoStr.c_str();
 		}
 
+		string getValuesAsString(){
+			return tagInfoStr;
+		}
+
 
 
 		void print(){
@@ -150,15 +153,25 @@ class ConstantPoolEntry {
 
 vector<ConstantPoolEntry> constantPool;
 
-class AttributeEntry{
+string getConstantPoolName(short i){
+	int k = (int) i;
+	while(!constantPool.at(k).isUTF()){
+		k = constantPool.at(k).getValueAt(0);
+	}
+	return constantPool.at(k).getValuesAsString();	
+}
+
+
+class OtherAttribute{
 	private:
 		short att_name_index;
 		int att_length;
-		vector<short> info;
 		int entryNum;
+		string utfname;
+		vector<short> info;
 
 	public:
-		AttributeEntry(int e){
+		OtherAttribute(int e){
 			att_name_index = 0;
 			att_length = 0;
 			entryNum = e;
@@ -172,34 +185,141 @@ class AttributeEntry{
 		void setAttributeLength(int l){
 			att_length = l;
 		}
+		int getEntryNum(){
+			return entryNum;
+		}
+		void addInfo(short s){
+			info.push_back(s);
+		}
 		void setAttributeNameIndex(short i){
 			att_name_index = i;
+			utfname = getConstantPoolName(att_name_index);
 		}
 		vector<short> getInfo(){
 			return info;
 		}
-		void addInfo(short c){
-			info.push_back(c);
+		string getName(){
+			return utfname;
 		}
 		short getInfoAt(int i){
 			return info.at(i);
 		}
 		void print(){
-			cout << "--------Attribute " << entryNum << "-------------\n";
-			cout << "Attribute Name Index: " << att_name_index << "\t Attribute Length: "<< att_length << "\n";
-			for (int i =0; i < info.size(); i++){
+			cout << "----------------Attribute " << entryNum << "-----------------------\n";
+			cout << "Attribute Name: #"<< att_name_index << " " << utfname.c_str() <<  "\t Attribute Length: "<< att_length << "\n";
+			for (int i = 0; i < att_length; i++){
 				cout << info.at(i);
-				if (i < info.size()-1){
-					cout << ",";
+				if (i < att_length - 1){
+					cout <<",";
 				}
 			}
 			cout << "\n";
 		}
-		
-		~AttributeEntry(){
+		~OtherAttribute(){
+			
+		}
+};
+
+
+class CodeAttribute{
+	private:
+		short att_name_index;
+		int att_length;
+		int entryNum;
+		short max_stack;
+		short max_locals;
+		int code_length;
+		vector<short> code;
+		short exception_length;
+		vector<int*> exception_table;
+		short att_count;
+		vector<OtherAttribute> otherAttributes;
+		string utfname;
+
+	public:
+		CodeAttribute(int e){
+			att_name_index = 0;
+			att_length = 0;
+			entryNum = e;
+		}
+		int getAttributeLength(){
+			return att_length;
+		}
+		short getAttributeNameIndex(){
+			return att_name_index;
+		}
+		void setAttributeLength(int l){
+			att_length = l;
+		}
+		int getEntryNum(){
+			return entryNum;
+		}
+		void setAttributeNameIndex(short i){
+			att_name_index = i;
+			utfname = getConstantPoolName(att_name_index);
+		}
+		void setVals(short c, short d, int e){
+			
+			max_stack = c;
+			max_locals = d;
+			code_length = e;
+		}
+		void setCode(vector<short> c){
+			code = c;
+		}
+		void setExceptionLength(short l){
+			exception_length = l;
+		}
+		void addException(int* s){
+			exception_table.push_back(s);
+		}
+		void setAttributeCount(short a){
+			att_count = a;
+		}
+		void addCode(short c){
+			code.push_back(c);
+		}
+		void addAttribute(OtherAttribute a){
+			otherAttributes.push_back(a);
+		}
+		int getCodeLength(){
+			return code_length;
+		}
+		vector<short> getCode(){
+			return code;
+		}
+		short getExceptionLength(){
+			return exception_length;
+		}
+		short getAttributeCount(){
+			return att_count;
+		}
+		vector<OtherAttribute> getAttributes(){
+			return otherAttributes;
+		}
+		string getName(){
+			return utfname;
+		}
+		void print(){
+			cout << "----------------Attribute " << entryNum << "-----------------------\n";
+			cout << "Attribute Name: #"<< att_name_index << " " << utfname.c_str() <<  "\t Attribute Length: "<< att_length << "\n";
+			cout << "Stacks: " << max_stack << "\t Locals: " << max_locals << "\n";
+			cout << "Code Length: "<< code_length << "\n";
+			for (int i = 0; i < code_length; i++){
+				cout << "  " << i << ": "<< code.at(i);
+				cout << "\n";
+			}
+			cout << "Other Attributes Count: " << att_count;
+			cout << "\n";
+		}
+		~CodeAttribute(){
 
 		}
 };
+
+
+
+
 
 
 class FieldEntry{
@@ -209,7 +329,7 @@ class FieldEntry{
 		short nameIndex;
 		short desIndex;
 		short attCount;
-		vector<AttributeEntry> attributes;
+		vector<OtherAttribute> otherAttributes;
 		int entryNum;
 
 	public:
@@ -247,14 +367,14 @@ class FieldEntry{
 		void setAttributeCount(short i ){
 			attCount = i;
 		}
-		vector<AttributeEntry> getAttributes(){
-			return attributes;
+		vector<OtherAttribute> getAttributes(){
+			return otherAttributes;
 		}
-		AttributeEntry getAttributeAt(int i){
-			return attributes.at(i);
+		OtherAttribute getOtherAttributeAt(int i){
+			return otherAttributes.at(i);
 		}
-		void addAttribute(AttributeEntry a){
-			attributes.push_back(a);
+		void addOtherAttribute(OtherAttribute a){
+			otherAttributes.push_back(a);
 		}
 		void print(){
 			cout << "-------------------Field " << entryNum <<"------------------\n";
@@ -267,9 +387,10 @@ class FieldEntry{
 			}
 			cout << "\n";
 			cout << "Name Index: "<< constantPool.at(nameIndex).getValuesStr() << "\t Descriptor Index: "<< constantPool.at(desIndex).getValuesStr() << "\t Attribute Count: "<< attCount<< "\n";
-			for(int i = 0; i < attributes.size();i++){
-				attributes.at(i).print();
-			} 
+			for (int i = 0; i < attCount; i++){
+				otherAttributes.at(i).print();
+				cout <<"\n";
+			}
 		}
 		~FieldEntry(){
 
@@ -283,7 +404,8 @@ class MethodEntry{
 		short nameIndex;
 		short desIndex;
 		short attCount;
-		vector<AttributeEntry> attributes;
+		vector<CodeAttribute> codeAttributes;
+		vector<OtherAttribute> otherAttributes;
 		int entryNum;
 
 	public:
@@ -321,14 +443,23 @@ class MethodEntry{
 		void setAttributeCount(short i ){
 			attCount = i;
 		}
-		vector<AttributeEntry> getAttributes(){
-			return attributes;
+		void addCodeAttribute(CodeAttribute c){
+			codeAttributes.push_back(c);
 		}
-		AttributeEntry getAttributeAt(int i){
-			return attributes.at(i);
+		vector<CodeAttribute> getCodeAttributes(){
+			return codeAttributes;
 		}
-		void addAttribute(AttributeEntry a){
-			attributes.push_back(a);
+		CodeAttribute getCodeAttributeAt(int i){
+			return codeAttributes.at(i);
+		}
+		void addOtherAttribute(OtherAttribute a){
+			otherAttributes.push_back(a);
+		}
+		vector<OtherAttribute> getOtherAttributes(){
+			return otherAttributes;
+		}
+		OtherAttribute getOtherAttributeAt(int i){
+			return otherAttributes.at(i);
 		}
 		void print(){
 			cout << "---------------Method "<< entryNum << "---------------\n";
@@ -341,9 +472,14 @@ class MethodEntry{
 			}
 			cout << "\n";
 			cout << "Name Index: "<< constantPool.at(nameIndex).getValuesStr()<< "\t Descriptor Index: "<< constantPool.at(desIndex).getValuesStr() << "\t Attribute Count: "<< attCount<< "\n";
-			for(int i = 0; i < attributes.size();i++){
-				attributes.at(i).print();
-			} 
+			for (int i = 0; i < otherAttributes.size(); i++){
+				otherAttributes.at(i).print();
+				cout <<"\n";
+			}
+			for (int i = 0; i < codeAttributes.size(); i++){
+				codeAttributes.at(i).print();
+				cout << "\n";
+			}
 		}
 		~MethodEntry(){
 
@@ -532,7 +668,7 @@ vector<FieldEntry> fields;
 short methods_count = 0;
 vector<MethodEntry> methods;
 short attributes_count = 0;
-vector<AttributeEntry> attributes;
+vector<OtherAttribute> attributes;
 
 
 
@@ -831,10 +967,10 @@ vector<string> parseMethodFlags(char* f){
 	return v;
 }
 
-AttributeEntry createAttribute(int e){
-	AttributeEntry a(e);
-	a.setAttributeNameIndex(stream.nextShort());
+OtherAttribute createOtherAttribute(int e, short name){
+	OtherAttribute a(e);
 	a.setAttributeLength(stream.nextInt());
+	a.setAttributeNameIndex(name);
 	char k[3];
 	for (int i = 0; i < a.getAttributeLength(); i++){
 		stream.nextInHex(k,3);
@@ -842,6 +978,38 @@ AttributeEntry createAttribute(int e){
 	}
 	return a;
 }
+
+CodeAttribute createCodeAttribute(int e, short name){
+	CodeAttribute c(e);
+	c.setAttributeNameIndex(name);
+	c.setAttributeLength(stream.nextInt());
+	short x = stream.nextShort();
+	short y = stream.nextShort();
+	int z = stream.nextInt();
+	c.setVals(x,y,z);
+	char k[3];
+	for (int i = 0; i < c.getCodeLength(); i++){
+		stream.nextInHex(k,3);
+		c.addCode(toShort(k));
+	}
+	c.setExceptionLength(stream.nextShort());
+	for (int i = 0; i < c.getExceptionLength();i++){
+		int s[4];
+		s[0] = stream.nextShort();
+		s[1] = stream.nextShort();
+		s[2] = stream.nextShort();
+		s[3] = stream.nextShort();
+		c.addException(s);
+	}
+	c.setAttributeCount(stream.nextShort());
+	for(int i = 0; i < c.getAttributeCount(); i++){
+		c.addAttribute(createOtherAttribute(i,stream.nextShort()));
+	}
+	return c;
+}
+
+
+
 
 void parse(vector<char> v){
 	stream.setStream(v);
@@ -879,7 +1047,9 @@ void parse(vector<char> v){
 			f.setDescriptorIndex(stream.nextShort());
 			f.setAttributeCount(stream.nextShort());
 			for (int j = 0; j < f.getAttributeCount(); j++){
-				f.addAttribute(createAttribute(j));
+				short k = stream.nextShort();
+				f.addOtherAttribute(createOtherAttribute(j,k));
+				
 			}
 			fields.push_back(f);
 		}
@@ -893,14 +1063,19 @@ void parse(vector<char> v){
 			m.setDescriptorIndex(stream.nextShort());
 			m.setAttributeCount(stream.nextShort());
 			for (int j = 0; j < m.getAttributeCount(); j++){
-				m.addAttribute(createAttribute(j));
+				short k = stream.nextShort();
+				if (getConstantPoolName(k).compare("Code") == 0){
+					m.addCodeAttribute(createCodeAttribute(j,k));
+				} else {
+					m.addOtherAttribute(createOtherAttribute(j,k));
+				}
 			}
 			methods.push_back(m);
 		}
 	}
 	attributes_count = stream.nextShort();
 	for (int i = 0; i < attributes_count; i++){
-		attributes.push_back(createAttribute(i));
+		attributes.push_back(createOtherAttribute(i,stream.nextShort()));
 	}
 	printAll();
 }
